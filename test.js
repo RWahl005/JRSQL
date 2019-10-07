@@ -13,25 +13,16 @@ class Yeet{
         this.name = name;
     }
 }
-var stu = [new Student("afs", 323232323232), new Student("a", 60)];
 const jsonSave = new RSQL.RSQL(new RSQL.JSONProperties("test.json"));
 
-jsonSave.proccessAsync(stu).then( res => {
-    const rs = res.getRSQL();
-    console.log(rs.asyncActions);
-    // console.log(res.getReason())
-    var gotStu = rs.get(Student);
-    // console.log(gotStu[0])
-    console.log("done");
-});
-// for(let i = 0; i < 100; i++){
-//     jsonSave.proccessAsync(stu).then( res => {
-//         console.log("works");
-//     });
-// }
-console.log(jsonSave.asyncActions);
+var stu = [];
+for(var i = 0; i < 100; i++){
+    stu.push(new Student("tes", Math.random()));
+}
+// jsonSave.proccess(stu);
+jsonSave.proccessAsync(stu);
+jsonSave.getAsync(Student).then(data => {
+    console.log(data[4]);
+}
+);
 console.log("test");
-jsonSave.delete(Student);
-// jsonSave.proccess([new Yeet("Test"), new Yeet("Test2")]);
-// var gotStudents = jsonSave.get(Yeet);
-// console.log(gotStudents[1]);
