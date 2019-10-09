@@ -13,16 +13,21 @@ class Yeet{
         this.name = name;
     }
 }
-const jsonSave = new RSQL.RSQL(new RSQL.JSONProperties("test.json"));
+// const jsonSave = new RSQL.RSQL(new RSQL.JSONProperties("test.json"));
 
-var stu = [];
-for(var i = 0; i < 100; i++){
-    stu.push(new Student("tes", Math.random()));
-}
-// jsonSave.proccess(stu);
-jsonSave.proccessAsync(stu);
-jsonSave.getAsync(Student).then(data => {
-    console.log(data[4]);
-}
-);
-console.log("test");
+// var stu = [];
+// for(var i = 0; i < 100; i++){
+//     stu.push(new Student("tes", Math.random()));
+// }
+// // jsonSave.proccess(stu);
+// jsonSave.proccessAsync(stu);
+// jsonSave.getAsync(Student).then(data => {
+//     console.log(data[4]);
+// }
+// );
+// console.log("test");
+
+const test = new RSQL.RSQL(new RSQL.SQLiteProperties("Users.db"));
+test.proccess([new Yeet("test"), new Yeet("test2")]).then((proccesor) => {
+    proccesor.getRSQL().get(Yeet);
+});
