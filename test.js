@@ -9,25 +9,22 @@ class Student{
     }
 }
 class Yeet{
-    constructor(name){
+    constructor(name, a){
         this.name = name;
+        this.a = a;
     }
 }
-// const jsonSave = new RSQL.RSQL(new RSQL.JSONProperties("test.json"));
 
-// var stu = [];
-// for(var i = 0; i < 100; i++){
-//     stu.push(new Student("tes", Math.random()));
-// }
-// // jsonSave.proccess(stu);
-// jsonSave.proccessAsync(stu);
-// jsonSave.getAsync(Student).then(data => {
-//     console.log(data[4]);
-// }
-// );
-// console.log("test");
+const test = new RSQL.RSQL(new RSQL.SQLiteProperties("Userss.db"));
+test.proccess([new Yeet("test", 43), new Yeet("test2", 33)]).then((proccesor) => {
+    proccesor.getRSQL().get(Yeet).then((data) => {
+        console.log(data[0].name);
+    })
+});
 
-const test = new RSQL.RSQL(new RSQL.SQLiteProperties("Users.db"));
-test.proccess([new Yeet("test"), new Yeet("test2")]).then((proccesor) => {
-    proccesor.getRSQL().get(Yeet);
+var data = [new Student("ha", 534), new Student("oof", 34)];
+test.proccess(data).then(proccesor => {
+    proccesor.getRSQL().get(Student).then(data => {
+        console.log(data[0].name);
+    })
 });

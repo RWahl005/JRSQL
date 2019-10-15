@@ -121,7 +121,7 @@ class RSQL {
             proccessJSON(listOfObjects, this.property);
         else if (this.property instanceof MYSQLProperties)
             proccessMYSQL(listOfObjects, this.property);
-        else if (this.property instanceof SQLiteProperties){
+        else if (this.property instanceof SQLiteProperties) {
             return new Promise((resolve, reject) => {
                 proccessSQLite(listOfObjects, this.property).then(() => {
                     resolve(new Proccessor(this, "Complete"));
@@ -166,6 +166,9 @@ class RSQL {
                     reject("Cannot find data for request class.");
                 else
                     resolve(data);
+            }
+            if(this.property instanceof SQLiteProperties){
+                resolve(getSQLite(clazz, this.property));
             }
         });
     }
@@ -280,50 +283,49 @@ async function proccessSQLite(listOfObjects, property) {
     // for(let i in listOfObjects){
     //     db.run(`insert into ${clazz.name} values(${getSQLValues(listOfObjects[i])})`);
     // }
-    return proccessData(clazz.name, listOfObjects).then(()=> db.close());
+    return proccessData(clazz.name, listOfObjects).then(() => db.close());
+
     function proccessData(clazzName, listOfObjects) {
         return new Promise((resolve, reject) => {
             db.serialize(() => {
                 db.run('drop table if exists ' + clazzName)
-                .run('create table ' + clazzName + '(' + getSQLColumnName(listOfObjects[0]) + ')');
-                console.log(getSQLValues(listOfObjects[0]));
+                    .run('create table ' + clazzName + '(' + getSQLColumnName(listOfObjects[0]) + ')');
                 let times = 1;
-                for(let i in listOfObjects){
+                for (let i in listOfObjects) {
                     db.run(`insert into ${clazz.name} values(${getSQLValues(listOfObjects[i])})`, () => {
-                        console.log(times);
-                        if(times == listOfObjects.length) resolve();
-                        else times ++;
-                    }  );
+                        if (times == listOfObjects.length) resolve();
+                        else times++;
+                    });
                 }
-                console.log("yes");
-                // resolve();
             });
-            
-        }).then(()=>{
-            console.log("end");
+
         });
     }
 }
 
-async function getSQLite(clazz, properties){
+async function getSQLite(clazz, properties) {
     let db = new sqlite.Database(`${properties.name}`, sqlite.OPEN_READONLY);
-    db.all('SELECT * FROM Yeet', (err, rows) => {
-        console.log(rows);
-    });
-//     await new Promise((resolve, reject) =>{
-//         db.serialize(() => {
-//         db.all('SELECT * FROM ' + clazz.name, [], (errors, rows) => {
-//             if(errors){
-//                 reject(errors);
-//             }
-//             console.log(rows);
-//             resolve(rows);
-//         });
-//     })
-// }).then((rows) => {
-//     console.log(rows[0].date);
-// });
-// db.close();
+    var get = new Promise((resolve, reject) => {
+            var output = [];
+            db.all('SELECT * FROM ' + clazz.name, (errors, rows) => {
+                if (errors) {
+                    reject(errors);
+                }
+                for (let i in rows) {
+                    let obj = new clazz();
+                    let keys = Reflect.ownKeys(rows[i]);
+                    for (let x in keys) {
+                        var value = Reflect.get(rows[i], keys[x]);
+                        Reflect.set(obj, keys[x], value);
+                    }
+                    output.push(obj);
+                }
+                resolve(output);
+            });
+        });
+    // db.close();
+    // return output;
+    return get.then((output) => {db.close(); return output;});
 }
 
 function getSQLColumnName(exObj) {
@@ -331,26 +333,26 @@ function getSQLColumnName(exObj) {
     var output = "";
     for (let i in keys) {
         if (Reflect.get(exObj, keys[i]) === parseInt(Reflect.get(exObj, keys[i]), 10)) { //TODO Replace?
-            if (output != "") output += ", " + exObj.constructor.name + " INT";
-            else output += exObj.constructor.name + " INT";
+            if (output != "") output += ", " + keys[i] + " INT";
+            else output += keys[i] + " INT";
         }
         if (typeof Reflect.get(exObj, keys[i]) === 'string') {
             let value = Reflect.get(exObj, keys[i]);
             if (value.length < 65535) {
-                if (output != "") output += ", " + exObj.constructor.name + " TEXT";
-                else output += exObj.constructor.name + " TEXT";
+                if (output != "") output += ", " + keys[i] + " TEXT";
+                else output += keys[i] + " TEXT";
             } else {
-                if (output != "") output += ", " + exObj.constructor.name + " MEDIUMTEXT";
-                else output += exObj.constructor.name + " MEDIUMTEXT";
+                if (output != "") output += ", " + keys[i] + " MEDIUMTEXT";
+                else output += keys[i] + " MEDIUMTEXT";
             }
         }
         if (Number(Reflect.get(exObj, keys[i])) === Reflect.get(exObj, keys[i]) && Reflect.get(exObj, keys[i]) % 1 !== 0) {
-            if (output != "") output += ", " + exObj.constructor.name + " FLOAT";
-            else output += exObj.constructor.name + " FLOAT";
+            if (output != "") output += ", " + keys[i] + " FLOAT";
+            else output += keys[i] + " FLOAT";
         }
         if (typeof Reflect.get(exObj, keys[i]) === 'boolean') {
-            if (output != "") output += ", " + exObj.constructor.name + " BOOLEAN";
-            else output += exObj.constructor.name + " BOOLEAN";
+            if (output != "") output += ", " + keys[i] + " BOOLEAN";
+            else output += keys[i] + " BOOLEAN";
         }
     }
     return output;
@@ -361,12 +363,12 @@ function getSQLValues(obj) {
     var output = "";
     for (let i in keys) {
         if (typeof keys[i] === "string") {
-            output += "'" + Reflect.get(obj, keys[i]).replace("'", "%$0027$%") + "'";
+            output += "'" + Reflect.get(obj, keys[i]).toString().replace("'", "%$0027$%") + "'";
         } else if (keys[i].constructor.name == "Array") {
-            output += generateList(Reflect.get(obj,keys[i]));
+            output += generateList(Reflect.get(obj, keys[i]));
         } else
             output += Reflect.get(obj, keys[i]);
-        if (keys.length < (i + 1)) output += ", ";
+        if (keys.length > (i + 1)) output += ", ";
     }
     return output;
 }
