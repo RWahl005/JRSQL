@@ -168,7 +168,7 @@ class RSQL {
                     resolve(data);
             }
             if(this.property instanceof SQLiteProperties){
-                resolve(getSQLite(clazz, this.property));
+                getSQLite(clazz, this.property).then(data => resolve(data));
             }
         });
     }
@@ -193,10 +193,6 @@ class RSQL {
         return false;
     }
 
-    deleteAsync() {
-
-    }
-
     /**
      * See if a class is currently being written to.
      * @param {*} clazz  
@@ -210,6 +206,11 @@ class RSQL {
     }
 }
 
+/**
+ * Function to get data in JSON
+ * @param {*} clazz 
+ * @param {*} name 
+ */
 function getJSON(clazz, name) {
     var data = fs.readFileSync(name);
     var json = JSON.parse(data);
@@ -231,6 +232,11 @@ function getJSON(clazz, name) {
     return null;
 }
 
+/**
+ * function to proccess the JSON data
+ * @param {*} listOfObjects 
+ * @param {*} property 
+ */
 function proccessJSON(listOfObjects, property) {
     let clazz = listOfObjects[0].constructor;
     if (!fs.existsSync(property.name)) {
@@ -255,6 +261,11 @@ function proccessJSON(listOfObjects, property) {
     return ProccessStates.Success;
 }
 
+/**
+ * Proccess the MYSQL data. (Untested)
+ * @param {*} listOfObjects 
+ * @param {*} property 
+ */
 function proccessMYSQL(listOfObjects, property) {
     let clazz = listOfObjects[0].constructor;
     let connection = mysql.createConnection({
@@ -275,14 +286,14 @@ function proccessMYSQL(listOfObjects, property) {
 }
 
 
+/**
+ * Proccess the sql data.
+ * @param {*} listOfObjects 
+ * @param {*} property 
+ */
 async function proccessSQLite(listOfObjects, property) {
     let clazz = listOfObjects[0].constructor;
     let db = new sqlite.Database(`${property.name}`);
-    // db.run('drop table if exists ' + clazz.name);
-    // db.run('create table ' + clazz.name + '(' + getSQLColumnName(listOfObjects[0]) + ')');
-    // for(let i in listOfObjects){
-    //     db.run(`insert into ${clazz.name} values(${getSQLValues(listOfObjects[i])})`);
-    // }
     return proccessData(clazz.name, listOfObjects).then(() => db.close());
 
     function proccessData(clazzName, listOfObjects) {
@@ -303,6 +314,11 @@ async function proccessSQLite(listOfObjects, property) {
     }
 }
 
+/**
+ * Get the SQLite data.
+ * @param {*} clazz 
+ * @param {*} properties 
+ */
 async function getSQLite(clazz, properties) {
     let db = new sqlite.Database(`${properties.name}`, sqlite.OPEN_READONLY);
     var get = new Promise((resolve, reject) => {
@@ -323,11 +339,14 @@ async function getSQLite(clazz, properties) {
                 resolve(output);
             });
         });
-    // db.close();
-    // return output;
     return get.then((output) => {db.close(); return output;});
 }
 
+/**
+ * Proccess the data and sets the data types.
+ * @param {*} exObj The object.
+ * @returns a string containing the column titles and types.
+ */
 function getSQLColumnName(exObj) {
     var keys = Reflect.ownKeys(exObj);
     var output = "";
@@ -358,6 +377,11 @@ function getSQLColumnName(exObj) {
     return output;
 }
 
+/**
+ * Format the values to be inserted into the table for SQL.
+ * @param {*} obj An example object
+ * @returns The string that will be used in the query.
+ */
 function getSQLValues(obj) {
     var keys = Reflect.ownKeys(obj);
     var output = "";
@@ -373,6 +397,11 @@ function getSQLValues(obj) {
     return output;
 }
 
+/**
+ * Converts a list into a string to be used.
+ * @param {*} list The list
+ * @returns The list turned into a string.
+ */
 function generateList(list) {
     var output = "'RSQLLIST[";
     for (let i in list) {
