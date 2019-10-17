@@ -16,15 +16,23 @@ class Yeet{
 }
 
 const test = new RSQL.RSQL(new RSQL.SQLiteProperties("Userss.db"));
-test.proccess([new Yeet("test", 43), new Yeet("test2", 33)]).then((proccesor) => {
-    proccesor.getRSQL().get(Yeet).then((data) => {
-        console.log(data[0].name);
-    })
-});
+// test.proccess([new Yeet("test", 43), new Yeet("test2", 33)]).then((proccesor) => {
+//     proccesor.getRSQL().get(Yeet).then((data) => {
+//         console.log(data[0].name);
+//     })
+// });
 
-var data = [new Student("ha", 534), new Student("oof", 34)];
-test.proccess(data).then(proccesor => {
-    proccesor.getRSQL().get(Student).then(data => {
-        console.log(data[0].name);
-    })
-});
+// var data = [new Student("ha", 534), new Student("oof", 34)];
+// test.proccess(data).then(proccesor => {
+//     proccesor.getRSQL().get(Student).then(data => {
+//         console.log(data[1].age);
+//     });
+// });
+
+// test.proccess([new Yeet("test", 43)]).then((proccesor) => {
+//     console.log("done");
+// })
+
+test.get(Yeet).then(data => {
+    console.log(data);
+})
