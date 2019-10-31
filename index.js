@@ -2,6 +2,8 @@ const fs = require('fs');
 const mysql = require('mysql');
 const sqlite = require('sqlite3').verbose();
 
+const mongoExt = require('./mongodb-extension.js');
+
 /**
  * The states at which a proccess can be completed or failed with.
  */
@@ -30,6 +32,14 @@ class JSONProperties extends Properties {
      */
     constructor(name) {
         super(name);
+    }
+}
+
+class MongoDBProperties extends Properties {
+    constructor(properties){
+        if(properties.address == null) throw "Error: No address is defined";
+        super(properties.address);
+        this.data = properties;
     }
 }
 
@@ -128,6 +138,10 @@ class RSQL {
                 })
             });
         }
+        else if(this.property instanceof MongoDBProperties){
+            console.log(this.property.data.address);
+            mongoExt.proccess(listOfObjects, this.property.data);
+        }
     }
 
     /**
@@ -136,6 +150,13 @@ class RSQL {
      */
     proccessAsync(listOfObjects) {
         const inst = this;
+        if (this.property instanceof SQLiteProperties) {
+            return new Promise((resolve, reject) => {
+                proccessSQLite(listOfObjects, this.property).then(() => {
+                    resolve(new Proccessor(this, "Complete"));
+                })
+            });
+        }
         return new Promise((resolve, reject) => {
             if (inst.asyncActions.length > inst.limit) {
                 reject(new Proccessor(null, ProccessStates.LimitReached));
@@ -152,6 +173,9 @@ class RSQL {
     get(clazz) {
         if (this.property instanceof JSONProperties) return getJSON(clazz, this.property.name);
         if (this.property instanceof SQLiteProperties) return getSQLite(clazz, this.property);
+        if(this.property instanceof MongoDBProperties) return new Promise((resolve, reject) => {
+            resolve(mongoExt.get(clazz, this.property.data))
+        });
     }
 
     /**
@@ -420,5 +444,6 @@ module.exports = {
     MYSQLProperties: MYSQLProperties,
     SQLiteProperties: SQLiteProperties,
     ProccessStates: ProccessStates,
-    Proccessor: Proccessor
+    Proccessor: Proccessor,
+    MongoDBProperties: MongoDBProperties
 };

@@ -1,0 +1,31 @@
+version: '3'
+services:
+  app:
+    container_name: docker-node-mongo
+    restart: always
+    build: .
+    ports:
+      - '8080:3000'
+    links:
+      - mongo
+  mongo:
+    container_name: mongo
+    image: mongo
+    ports:
+      - '27017:27017'
+  # # MongoAdmin kinda like phpmysql
+  # # DOCS: https://hub.docker.com/_/mongo-express
+  mongo-express:
+    image: "mongo-express:latest"
+    ports:
+      - "8081:8081"
+    # environment:
+      # - ME_CONFIG_OPTIONS_EDITORTHEME=ambiance
+      # - ME_CONFIG_MONGODB_SERVER=database
+      # - ME_CONFIG_MONGODB_PORT=27017
+      # - ME_CONFIG_MONGODB_ENABLE_ADMIN=false
+      # - ME_CONFIG_MONGODB_AUTH_DATABASE=admin
+      # MONGO_ROOT_USER=devroot
+      # MONGO_ROOT_PASSWORD=devroot
+      # MONGOEXPRESS_LOGIN=dev
+      # MONGOEXPRESS_PASSWORD=dev
