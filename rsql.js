@@ -1,17 +1,8 @@
-const fs = require('fs');
 const mysql = require('mysql');
-const sqlite = require('sqlite3').verbose();
 
-const mongoExt = require('./mongodb-extension.js');
-
-/**
- * The states at which a proccess can be completed or failed with.
- */
-const ProccessStates = {
-    CreatedSuccess: "Created_Success",
-    Success: "Success",
-    LimitReached: "Limit_Reached"
-}
+const mongoExt = require('./extensions/mongodb-extension.js');
+const sqlite = require('./extensions/sql-extension.js');
+const json = require('./extensions/json-extension.js');
 
 /**
  * Generic Properties Class
@@ -128,12 +119,12 @@ class RSQL {
      */
     proccess(listOfObjects) {
         if (this.property instanceof JSONProperties)
-            proccessJSON(listOfObjects, this.property);
+            json.proccess(listOfObjects, this.property);
         else if (this.property instanceof MYSQLProperties)
             proccessMYSQL(listOfObjects, this.property);
         else if (this.property instanceof SQLiteProperties) {
             return new Promise((resolve, reject) => {
-                proccessSQLite(listOfObjects, this.property).then(() => {
+                sqlite.proccess(listOfObjects, this.property).then(() => {
                     resolve(new Proccessor(this, "Complete"));
                 })
             });
@@ -155,7 +146,7 @@ class RSQL {
         const inst = this;
         if (this.property instanceof SQLiteProperties) {
             return new Promise((resolve, reject) => {
-                proccessSQLite(listOfObjects, this.property).then(() => {
+                sqlite.proccess(listOfObjects, this.property).then(() => {
                     resolve(new Proccessor(this, "Complete"));
                 })
             });
@@ -165,7 +156,7 @@ class RSQL {
                 reject(new Proccessor(null, ProccessStates.LimitReached));
             }
             if (this.property instanceof JSONProperties)
-                resolve(new Proccessor(inst, proccessJSON(listOfObjects, inst.property)));
+                resolve(new Proccessor(inst, json.proccess(listOfObjects, inst.property)));
         });
     }
 
@@ -174,8 +165,8 @@ class RSQL {
      * @param {*} clazz The class to get the data for.
      */
     get(clazz) {
-        if (this.property instanceof JSONProperties) return getJSON(clazz, this.property.name);
-        if (this.property instanceof SQLiteProperties) return getSQLite(clazz, this.property);
+        if (this.property instanceof JSONProperties) return json.get(clazz, this.property.name);
+        if (this.property instanceof SQLiteProperties) return sqlite.get(clazz, this.property);
         if(this.property instanceof MongoDBProperties) return new Promise((resolve, reject) => {
             resolve(mongoExt.get(clazz, this.property.data))
         });
@@ -188,14 +179,14 @@ class RSQL {
     getAsync(clazz) {
         return new Promise((resolve, reject) => {
             if (this.property instanceof JSONProperties) {
-                var data = getJSON(clazz, this.property.name);
+                var data = json.get(clazz, this.property.name);
                 if (data == null)
                     reject("Cannot find data for request class.");
                 else
                     resolve(data);
             }
             if(this.property instanceof SQLiteProperties){
-                getSQLite(clazz, this.property).then(data => resolve(data));
+                sqlite.get(clazz, this.property).then(data => resolve(data));
             }
         });
     }
@@ -234,61 +225,6 @@ class RSQL {
 }
 
 /**
- * Function to get data in JSON
- * @param {*} clazz 
- * @param {*} name 
- */
-function getJSON(clazz, name) {
-    var data = fs.readFileSync(name);
-    var json = JSON.parse(data);
-    for (let i in json) {
-        if (json[i][0] == clazz.name) {
-            var objList = [];
-            for (let x in json[i][1]) {
-                let obj = new clazz();
-                for (let prop in Reflect.ownKeys(json[i][1][x])) {
-                    let curProp = Reflect.ownKeys(json[i][1][x])[prop];
-                    let curPropValue = Reflect.get(json[i][1][x], curProp);
-                    Reflect.set(obj, curProp, curPropValue);
-                }
-                objList.push(obj);
-            }
-            return objList;
-        }
-    }
-    return null;
-}
-
-/**
- * function to proccess the JSON data
- * @param {*} listOfObjects 
- * @param {*} property 
- */
-function proccessJSON(listOfObjects, property) {
-    let clazz = listOfObjects[0].constructor;
-    if (!fs.existsSync(property.name)) {
-        var objs = [
-            [clazz.name, listOfObjects]
-        ];
-        fs.writeFileSync(property.name, JSON.stringify(objs), function () {});
-        return ProccessStates.CreatedSuccess;
-    }
-    var data = fs.readFileSync(property.name);
-    var js = JSON.parse(data);
-    for (let i in js) {
-        if (js[i][0] == clazz.name) {
-            js.splice(i, 1);
-            js.push([clazz.name, listOfObjects]);
-            fs.writeFileSync(property.name, JSON.stringify(js), function () {});
-            return ProccessStates.Success;
-        }
-    }
-    js.push([clazz.name, listOfObjects]);
-    fs.writeFileSync(property.name, JSON.stringify(js), function () {});
-    return ProccessStates.Success;
-}
-
-/**
  * Proccess the MYSQL data. (Untested)
  * @param {*} listOfObjects 
  * @param {*} property 
@@ -313,140 +249,14 @@ function proccessMYSQL(listOfObjects, property) {
 }
 
 
-/**
- * Proccess the sql data.
- * @param {*} listOfObjects 
- * @param {*} property 
- */
-async function proccessSQLite(listOfObjects, property) {
-    let clazz = listOfObjects[0].constructor;
-    let db = new sqlite.Database(`${property.name}`);
-    return proccessData(clazz.name, listOfObjects).then(() => db.close());
 
-    function proccessData(clazzName, listOfObjects) {
-        return new Promise((resolve, reject) => {
-            db.serialize(() => {
-                db.run('drop table if exists ' + clazzName)
-                    .run('create table ' + clazzName + '(' + getSQLColumnName(listOfObjects[0]) + ')');
-                let times = 1;
-                for (let i in listOfObjects) {
-                    db.run(`insert into ${clazz.name} values(${getSQLValues(listOfObjects[i])})`, () => {
-                        if (times == listOfObjects.length) resolve();
-                        else times++;
-                    });
-                }
-            });
-
-        });
-    }
-}
-
-/**
- * Get the SQLite data.
- * @param {*} clazz 
- * @param {*} properties 
- */
-async function getSQLite(clazz, properties) {
-    let db = new sqlite.Database(`${properties.name}`, sqlite.OPEN_READONLY);
-    var get = new Promise((resolve, reject) => {
-            var output = [];
-            db.all('SELECT * FROM ' + clazz.name, (errors, rows) => {
-                if (errors) {
-                    reject(errors);
-                }
-                for (let i in rows) {
-                    let obj = new clazz();
-                    let keys = Reflect.ownKeys(rows[i]);
-                    for (let x in keys) {
-                        var value = Reflect.get(rows[i], keys[x]);
-                        Reflect.set(obj, keys[x], value);
-                    }
-                    output.push(obj);
-                }
-                resolve(output);
-            });
-        });
-    return get.then((output) => {db.close(); return output;});
-}
-
-/**
- * Proccess the data and sets the data types.
- * @param {*} exObj The object.
- * @returns a string containing the column titles and types.
- */
-function getSQLColumnName(exObj) {
-    var keys = Reflect.ownKeys(exObj);
-    var output = "";
-    for (let i in keys) {
-        if (Reflect.get(exObj, keys[i]) === parseInt(Reflect.get(exObj, keys[i]), 10)) { //TODO Replace?
-            if (output != "") output += ", " + keys[i] + " INT";
-            else output += keys[i] + " INT";
-        }
-        if (typeof Reflect.get(exObj, keys[i]) === 'string') {
-            let value = Reflect.get(exObj, keys[i]);
-            if (value.length < 65535) {
-                if (output != "") output += ", " + keys[i] + " TEXT";
-                else output += keys[i] + " TEXT";
-            } else {
-                if (output != "") output += ", " + keys[i] + " MEDIUMTEXT";
-                else output += keys[i] + " MEDIUMTEXT";
-            }
-        }
-        if (Number(Reflect.get(exObj, keys[i])) === Reflect.get(exObj, keys[i]) && Reflect.get(exObj, keys[i]) % 1 !== 0) {
-            if (output != "") output += ", " + keys[i] + " FLOAT";
-            else output += keys[i] + " FLOAT";
-        }
-        if (typeof Reflect.get(exObj, keys[i]) === 'boolean') {
-            if (output != "") output += ", " + keys[i] + " BOOLEAN";
-            else output += keys[i] + " BOOLEAN";
-        }
-    }
-    return output;
-}
-
-/**
- * Format the values to be inserted into the table for SQL.
- * @param {*} obj An example object
- * @returns The string that will be used in the query.
- */
-function getSQLValues(obj) {
-    var keys = Reflect.ownKeys(obj);
-    var output = "";
-    for (let i in keys) {
-        if (typeof keys[i] === "string") {
-            output += "'" + Reflect.get(obj, keys[i]).toString().replace("'", "%$0027$%") + "'";
-        } else if (keys[i].constructor.name == "Array") {
-            output += generateList(Reflect.get(obj, keys[i]));
-        } else
-            output += Reflect.get(obj, keys[i]);
-        if (keys.length > (i + 1)) output += ", ";
-    }
-    return output;
-}
-
-/**
- * Converts a list into a string to be used.
- * @param {*} list The list
- * @returns The list turned into a string.
- */
-function generateList(list) {
-    var output = "'RSQLLIST[";
-    for (let i in list) {
-        output += "`" + list[i].replace("'", "%$0027$%").replace("`", "%$0060$%").replace('"', "%$0022$%").replace("|", "%$007C$%")
-            .replace("[", "%$005B$%").replace("]", "%$005D$%");
-        if (i < list.size() - 1)
-            output += "`|";
-    }
-    output += "`]'";
-    return output;
-}
 
 module.exports = {
     RSQL: RSQL,
     JSONProperties: JSONProperties,
     MYSQLProperties: MYSQLProperties,
     SQLiteProperties: SQLiteProperties,
-    ProccessStates: ProccessStates,
+    ProccessStates: json.ProccessStates,
     Proccessor: Proccessor,
     MongoDBProperties: MongoDBProperties
 };
