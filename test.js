@@ -19,14 +19,18 @@ const rinst = new RSQL.RSQL(new RSQL.MongoDBProperties({
     address: 'mongodb://localhost:27017',
     name: 'abc'
 }));
-// const cl = [new ExampleClass("test", 21, 2.4), new ExampleClass("yes", 21, 3223.4)];
-// rinst.proccess(cl);
-// rinst.proccess([new ExampleData("Test", false), new ExampleData("Other", true)])
-
-let data = rinst.get(ExampleClass);
-data.then((d) => {
-    console.log(d);
+const cl = [new ExampleClass("test", 21, 2.4), new ExampleClass("yes", 21, 3223.4)];
+rinst.proccess(cl).then((result) => {
+    result.getRSQL().get(ExampleClass).then((data) => {
+        console.log(data);
+    })
 })
+rinst.proccess([new ExampleData("Test", false), new ExampleData("Other", true)])
+
+// let data = rinst.get(ExampleClass);
+// data.then((d) => {
+//     console.log(d);
+// })
 
 
 

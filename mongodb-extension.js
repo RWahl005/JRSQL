@@ -1,14 +1,12 @@
 const mongo = require('mongodb').MongoClient;
 async function proccess(listOfObjects, props){
     let clazz = listOfObjects[0].constructor;
-    await mongo.connect(props.address, { useNewUrlParser: true },
-        (err, db)=>{
-            const dbs = db.db(props.name);
-            dbs.collection(clazz.name).removeMany({});
-            dbs.collection(clazz.name).insertMany(listOfObjects);
-            // dbs.close();
-            db.close();
-        });
+    let db = await mongo.connect(props.address, { useNewUrlParser: true, useUnifiedTopology: true });
+    const dbs = db.db(props.name);
+    dbs.collection(clazz.name).removeMany({});
+    dbs.collection(clazz.name).insertMany(listOfObjects);
+    // dbs.close();
+    db.close();
     return;
 }
 

@@ -140,7 +140,10 @@ class RSQL {
         }
         else if(this.property instanceof MongoDBProperties){
             console.log(this.property.data.address);
-            mongoExt.proccess(listOfObjects, this.property.data);
+            return new Promise(async (resolve, reject) => {
+                await mongoExt.proccess(listOfObjects, this.property.data)
+                resolve(new Proccessor(this, "Complete"));
+            });
         }
     }
 
